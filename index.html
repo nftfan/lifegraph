@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji Note Frequency Bar Graph</title>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1002.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000000;
+            color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            overflow-x: auto;
+        }
+        canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+        @media (max-width: 768px) {
+            .container {
+                max-width: 100%;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="emojiBarGraph"></canvas>
+    </div>
+
+    <script>
+        AWS.config.update({
+            region: 'eu-north-1',
+            credentials: new AWS.Credentials('AKIAVRUVVVUMQ7ZZ55PL', 'BuMg3n7AOfsvmbfvjv00AE1XXACdeKiCpgj/LMmC')
+        });
+
+        var dynamodb = new AWS.DynamoDB.DocumentClient();
+        var tableName = 'lf02';
+
+        function fetchNotes() {
+            var params = {
+                TableName: tableName
+            };
+
+            dynamodb.scan(params, function(err, data) {
+                if (err) {
+                    console.error('Error fetching notes:', err);
+                } else {
+                    const notes = data.Items;
+                    displayBarGraph(notes);
+                }
+            });
+        }
+
+        function displayBarGraph(notes) {
+            const emojiFrequency = notes.reduce((acc, note) => {
+                acc[note.emoji] = (acc[note.emoji] || 0) + 1;
+                return acc;
+            }, {});
+
+            const emojiLabels = Object.keys(emojiFrequency);
+            const emojiCounts = Object.values(emojiFrequency);
+
+            // Define solid colors for each bar
+            const barColors = [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(199, 199, 199, 1)',
+                'rgba(83, 102, 255, 1)',
+                'rgba(255, 192, 203, 1)',
+                'rgba(139, 69, 19, 1)',
+                'rgba(255, 105, 180, 1)',
+                'rgba(0, 255, 127, 1)',
+                'rgba(70, 130, 180, 1)',
+                'rgba(30, 144, 255, 1)',
+                'rgba(123, 104, 238, 1)'
+            ];
+
+            const ctx = document.getElementById('emojiBarGraph').getContext('2d');
+
+            const emojiBarGraph = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: emojiLabels,
+                    datasets: [{
+                        label: 'Number of Notes',
+                        data: emojiCounts,
+                        backgroundColor: barColors.slice(0, emojiLabels.length),
+                        borderColor: barColors.slice(0, emojiLabels.length),
+                        borderWidth: 2,
+                        barThickness: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutBounce'
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#f5f5f5'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#f5f5f5'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#f5f5f5'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#777',
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchNotes();
+        });
+    </script>
+</body>
+</html>
